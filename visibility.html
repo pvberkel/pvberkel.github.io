@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Page Visibility API and timers</title>
+</head>
+<body>
+    <h1>Test Page Visibility API and timers</h1>
+    <p id='testelement'> empty </p>
+
+    <script>
+    // Inline code is for educational purposes. Best practice is to put your scripts in external files.
+    // Based on the tutorial at https://developer.mozilla.org/en-US/docs/Web/Guide/User_experience/Using_the_Page_Visibility_API
+
+    (function() {
+        'use strict';
+        
+        // Set the name of the "hidden" property and the change event for visibility
+        var hidden, visibilityChange; 
+        let timer = undefined;
+        let lastupdate = new Date();
+        if (typeof document.hidden !== "undefined") {
+          hidden = "hidden";
+          visibilityChange = "visibilitychange";
+        } else if (typeof document.mozHidden !== "undefined") { // Firefox up to v17
+          hidden = "mozHidden";
+          visibilityChange = "mozvisibilitychange";
+        } else if (typeof document.webkitHidden !== "undefined") { // Chrome up to v32, Android up to v4.4, Blackberry up to v10
+          hidden = "webkitHidden";
+          visibilityChange = "webkitvisibilitychange";
+        }
+        
+        var testelement = document.getElementById("testelement");
+
+        let windowtext = 'visible';
+        function handleVisibilityChange() {
+          if (document[hidden]) {
+            //document.title = 'hidden';
+            clearTimeout(timer);
+            windowtext = 'hidden';
+            document.title = windowtext + ' ' + teller;
+          } else {
+            //document.title = 'visible'
+            repeatupdate(false)
+            windowtext = 'visible';
+            document.title = windowtext + ' ' + teller;
+          }
+        }
+
+        // Warn if the browser doesn't support addEventListener or the Page Visibility API
+        if (typeof document.addEventListener === "undefined" || typeof document[hidden] === "undefined") {
+          alert("This demo requires a modern browser that supports the Page Visibility API.");
+        } else {
+          // Handle page visibility change   
+          document.addEventListener(visibilityChange, handleVisibilityChange, false);
+        }
+
+        let teller = 0;
+        function repeatupdate(isInit) {
+          let currenttime = new Date();
+          console.log('time passed = '+ ( currenttime - lastupdate ) );
+          if ( isInit || (currenttime - lastupdate) > 5000 ) {
+            console.log('update')
+            teller++;
+            console.log('rep')
+            testelement.innerHTML = teller;
+            document.title = windowtext + ' ' + teller;
+            lastupdate = new Date();
+            // Wait some time before updating all data.
+            timer = setTimeout(repeatupdate.bind(null, false), 5000);
+          } else {
+            console.log('repeat in ' + (5000 - (currenttime - lastupdate)) );
+            timer = setTimeout(repeatupdate.bind(null, false), 5000 - (currenttime - lastupdate));
+          }
+        }
+        repeatupdate(true);
+
+    })();
+    </script>
+</body>
+</html>

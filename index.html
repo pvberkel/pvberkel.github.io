@@ -1,0 +1,449 @@
+<!doctype html>
+<html id='root' lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+
+    <title>Automaat</title>
+  </head>
+  <body>
+    <p style="font-size:30px">
+      <b>Automaat</b> 
+      <!--span id="connection" style="font-size:20px">Niet verbonden</span-->
+    </p>
+    <script src="env.js"></script>
+    <script>
+      window.fbAsyncInit = function() {
+        FB.init({
+          appId      : env.FACEBOOKAPPID,
+          cookie     : true,
+          xfbml      : true,
+          version    : 'v2.5'
+        });
+        
+        FB.AppEvents.logPageView();   
+      };
+
+      (function(d, s, id){
+        var js, fjs = d.getElementsByTagName(s)[0];
+        if (d.getElementById(id)) {return;}
+        js = d.createElement(s); js.id = id;
+        js.src = "https://connect.facebook.net/en_US/sdk.js";
+        fjs.parentNode.insertBefore(js, fjs);
+      }(document, 'script', 'facebook-jssdk'));
+    </script>
+    <script src="./share.js"></script>
+    <!-- Optional JavaScript; choose one of the two! -->
+
+    <!-- Option 1: Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+    <script type="text/javascript">
+      let root = document.querySelector('#root');
+      const event = new Event('requestproducts');
+      const lastSmulBoxMachineIdStr = 'lastSmulBoxMachineId';
+      let machinesData = {};
+      let productsData = {};
+      let selectedMachineID = restoreFromLocalStorage();
+      let newMachine = true;
+      let timer = undefined;
+      let lastupdate = new Date();
+      let teller = 0;
+      let hidden, visibilityChange; 
+
+      console.log(env.SERVERIP, env.SERVERPORT);
+
+      function setLocationCallBack(msg,machineID) {
+        localStorage.setItem(lastSmulBoxMachineIdStr, machineID);
+
+        // clear products if machine changes
+        if ( machineID != selectedMachineID ) {
+          clearProducts();
+        }
+
+        selectedMachineID = machineID;
+        fillMachines(machinesData);
+      }
+
+      root.addEventListener('requestproducts', function (e) {
+        if (newMachine) {
+          clearProducts();
+        }
+        updatepublicData2();
+
+        newMachine = false;
+      }, false);
+
+      function machine2PowerBadgeColor(machine){
+        if (machine.toUpperCase() == "ON") {
+          return `bg-success`;
+        }
+        return `bg-danger`;
+      }
+      function machine2PowerStatus(machine){
+        if (machine.toUpperCase() == "ON") {
+          return `AAN`;
+        }
+        return `UIT`;
+      }
+      
+      // Set the name of the "hidden" property and the change event for visibility
+      if (typeof document.hidden !== "undefined") {
+        hidden = "hidden";
+        visibilityChange = "visibilitychange";
+      } else if (typeof document.mozHidden !== "undefined") { // Firefox up to v17
+        hidden = "mozHidden";
+        visibilityChange = "mozvisibilitychange";
+      } else if (typeof document.webkitHidden !== "undefined") { // Chrome up to v32, Android up to v4.4, Blackberry up to v10
+        hidden = "webkitHidden";
+        visibilityChange = "webkitvisibilitychange";
+      }
+
+      let windowtext = 'visible';
+      function handleVisibilityChange() {
+        if (document[hidden]) {
+          clearTimeout(timer);
+          windowtext = 'hidden';
+        } else {
+          repeatUpdatepublicData(false)
+          windowtext = 'visible';
+        }
+      }
+
+      // Warn if the browser doesn't support addEventListener or the Page Visibility API
+      if (typeof document.addEventListener === "undefined" || typeof document[hidden] === "undefined") {
+        alert("This demo requires a modern browser that supports the Page Visibility API.");
+      } else {
+        // Handle page visibility change   
+        document.addEventListener(visibilityChange, handleVisibilityChange, false);
+      }
+
+      function msToTimeString(ms) {
+        let seconds = (ms / 1000).toFixed(1);
+        let minutes = (ms / (1000 * 60)).toFixed(1);
+        let hours = (ms / (1000 * 60 * 60)).toFixed(1);
+        let days = (ms / (1000 * 60 * 60 * 24)).toFixed(1);
+        if (seconds < 60) return seconds + " seconden";
+        else if (minutes < 60) return minutes + " minuten";
+        else if (hours < 24) return hours + " uur";
+        else return days + " dagen"
+      }
+
+      function restoreFromLocalStorage(){
+        let machineID = undefined;
+        if ( localStorage.getItem(lastSmulBoxMachineIdStr) !== null ) {
+          machineID = parseInt(localStorage.getItem(lastSmulBoxMachineIdStr));
+          if (machineID == NaN) {
+            machineID = undefined;
+            localStorage.setItem(lastSmulBoxMachineIdStr, undefined);
+          }
+        }
+        if (machineID == undefined){
+          console.log('Did not remember machine id');
+        } else {
+          console.log('Remember machine id = ' + machineID);
+        }
+        return machineID;
+      }
+
+      function machineListHTML(machine) {
+        let r = 
+        `<li machineID=${machine.id} class="machine-list-item list-group-item d-flex justify-content-between align-items-start btn" data-bs-toggle="collapse" data-bs-target="#machinelistcollapse">
+          <div class="ms-2 me-auto">
+            <div class="fw-bold">${machine.name}</div>
+          </div>
+          <span class="badge ${machine2PowerBadgeColor(machine.power_status)} rounded-pill">${machine2PowerStatus(machine.power_status)}</span>
+        </li>`;
+        return r;
+      }
+      
+      function fillMachines(machinesData) {
+        const ol = document.getElementById("machinesList");
+        ol.innerHTML = "";
+
+        let oldID = selectedMachineID;
+        if (machinesData && machinesData.machines) {
+
+          let foundSelected = false;
+          // Is selected machine still present
+          if ( selectedMachineID == undefined) {          
+            let list = machinesData.machines.filter( machine => machine.id == selectedMachineID );
+            foundSelected = list.length > 0 ? true : false;
+          }
+
+          if ( selectedMachineID == undefined && 
+               machinesData.machines.length > 0 &&
+               !foundSelected ){
+            selectedMachineID = machinesData.machines[0].id;
+          }
+
+          if (selectedMachineID != undefined) {
+            let seperateMachines = machinesData.machines.reduce((accum, machine, index) => {
+              if ( machine.id == selectedMachineID) { 
+                return { select: index, other: accum.other };
+              } else {
+                return { select: accum.select, other: accum.other.concat([index]) };
+              };
+            }, {select: -1, other: []});
+
+            if(seperateMachines.select >= 0){
+              selectedMachineID = machinesData.machines[seperateMachines.select].id;
+              selectedMachineName = machinesData.machines[seperateMachines.select].name;
+              selectedMachinePower = machinesData.machines[seperateMachines.select].power_status;
+              document.querySelector('#currectVendingMachine').innerHTML = 
+              `<div class="ms-2 me-auto">
+                    <div class="fw-bold">${selectedMachineName}</div>
+                  </div>
+              <span class="badge ${machine2PowerBadgeColor(selectedMachinePower)} rounded-pill">${machine2PowerStatus(selectedMachinePower)}</span>`;
+            }
+
+            seperateMachines.other.forEach(idx => {
+                ol.innerHTML += machineListHTML(machinesData.machines[idx]);
+            });
+
+            /*
+            const downloadTime = new Date(machinesData.time);
+            const now = new Date();
+            const diff = now - downloadTime;
+            const el = document.getElementById("connection");
+            el.innerHTML = msToTimeString(diff) + ' geleden';
+            */
+            
+            if(oldID !== selectedMachineID ) {
+              newMachine = true;
+            }
+            // Trigger request products belonging to this machine.
+            root.dispatchEvent(event);
+
+          } else {
+            console.error('EVERYTING WENTH WRONG!!!!. SEND HELP!!!');
+          }
+        }
+        AddEventlistenersMachineSelect();
+      }
+
+      function productAmount2BadgeColor(amount){
+        if (amount == 1) {
+          return `bg-warning`;
+        }
+        if (amount > 1) {
+          return `bg-success`;
+        }
+        return `bg-danger`;
+      }
+      
+      function productHTML(product) {
+        let r = `
+            <li class="list-group-item d-flex justify-content-between align-items-start">
+              <div class="ms-2 me-auto">
+                <div class="fw-bold">${product.name}</div>
+                € ${product.selections[0].price}
+                </div>
+              <span class="badge ${productAmount2BadgeColor(product.amount)} rounded-pill">${product.amount}</span>
+            </li>`;
+        return r;
+      }
+
+      function productHTMLEmpty() {
+        let r = `
+          <li class="machine-list-item list-group-item d-flex justify-content-between align-items-start btn" data-bs-toggle="collapse" data-bs-target="#machinelistcollapse">
+            <div class="ms-2 me-auto">
+              <div class="fw-bold">Loading data...</div>
+            </div>
+          </li>`;
+        return r;
+      }
+
+      function fillProducts(machineId,productsDataNew) {
+        const ol = document.getElementById("productlist");
+        ol.innerHTML = "";
+
+        if ( selectedMachineID != undefined ) {
+          if ( selectedMachineID == machineId ) {
+            productsData = productsDataNew;
+            
+            productsDataNew.forEach(product => {
+                ol.innerHTML += productHTML(product);
+            });
+          }
+        }
+      }
+
+      function clearProducts() {
+        const ol = document.getElementById("productlist");
+        ol.innerHTML = "";
+        ol.innerHTML += productHTMLEmpty();
+      }
+
+      function readMachinesPromise() {
+          return new Promise(function (resolve, reject) {
+              let getURL = '';
+              if (env.SERVERPORT == '443') {
+                getURL = 'https://'+ env.SERVERIP + '/machine';
+              } else {
+                getURL = 'http://'+ env.SERVERIP + '/machine';
+              }
+              console.log('getURL =' + getURL);
+              let req = new XMLHttpRequest();
+              req.open('GET', getURL);
+              req.onload = function () {
+                  if (this.status >= 200 && this.status < 300) {
+                      resolve(JSON.parse(req.response).result);
+                  } else {
+                      reject({
+                          status: this.status,
+                          statusText: req.statusText
+                      });
+                  }
+              };
+              req.onerror = function () {
+                  reject({
+                      status: this.status,
+                      statusText: req.statusText
+                  });
+              };
+              req.send();
+          });
+      }
+
+      function readProducts(machineID) {
+        return new Promise(function (resolve, reject) {
+              let getURL = '';
+              if (env.SERVERPORT == '443') {
+                getURL = 'https://'+ env.SERVERIP + '/machine/'+machineID+'/products';
+              } else {
+                getURL = 'http://'+ env.SERVERIP + '/machine/'+machineID+'/products';
+              }
+              console.log('getURL =' + getURL);
+              let req = new XMLHttpRequest();
+              req.open('GET', getURL);
+              req.onload = function () {
+                  if (this.status >= 200 && this.status < 300) {
+                      const parsed = JSON.parse(req.response);
+                      if (parsed.code == 200) {
+                        resolve( parsed.result );
+                      } else {
+                        reject({status: parsed.code,
+                                statusText: parsed.result});
+                      }
+                  } else {
+                      reject({
+                          status: this.status,
+                          statusText: req.statusText
+                      });
+                  }
+              };
+              req.onerror = function () {
+                  reject({
+                      status: this.status,
+                      statusText: req.statusText
+                  });
+              };
+              req.send();
+          });
+      }
+
+      // await helper function 
+      const handle = (promise) =>{
+        return promise
+          .then(data => ([data, undefined]))
+          .catch(error => Promise.resolve([undefined, error]));
+      }
+
+      async function updatepublicData(){
+        let [machinesDataLocal, error] = await handle(readMachinesPromise());
+        if(error == undefined){
+          console.log('Retrieved machines.');
+          machinesData = machinesDataLocal;
+        } else {
+          console.log('Machines retrievel failed.');
+          machinesData = {};
+        }
+        fillMachines(machinesData);
+        return 0;
+      }
+
+      async function updatepublicData2(){
+        let [productsDataLocal, error] = await handle(readProducts(selectedMachineID));
+        if(error == undefined){
+          console.log('Retrieved products.');
+          productsData = productsDataLocal;
+        } else {
+          console.log('Products retrievel failed.');
+          productsData = [];
+        }
+        fillProducts(selectedMachineID, productsData);
+        return 0;
+      }
+
+      async function repeatUpdatepublicData(isInit) {
+        let currenttime = new Date();
+        console.log('time passed = '+ ( currenttime - lastupdate ) );
+        if ( isInit || (currenttime - lastupdate) > env.REPEATDELAY ) {
+          console.log('update')
+          await handle( updatepublicData() ); // Handles all errors
+
+          lastupdate = new Date();
+          // Wait some time before updating all data.
+          timer = setTimeout(repeatUpdatepublicData.bind(null, false), env.REPEATDELAY);
+        } else {
+          console.log('repeat in ' + (env.REPEATDELAY - (currenttime - lastupdate)) );
+          timer = setTimeout(repeatUpdatepublicData.bind(null, false), env.REPEATDELAY - (currenttime - lastupdate));
+        }
+      }
+      repeatUpdatepublicData(true);
+
+    </script>
+
+    <!-- Option 2: Separate Popper and Bootstrap JS -->
+    <!--
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.2/dist/umd/popper.min.js" integrity="sha384-7+zCNj/IqJ95wo16oMtfsKbZ9ccEh31eOz1HGyDuCQ6wgnyJNSYdrPa03rtR1zdB" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js" integrity="sha384-QJHtvGhmr9XOIpI6YVutG+2QOK9T+ZnN4kzFN1RtK3zEFEIsxhlmWl5/YESvpZ13" crossorigin="anonymous"></script>
+    -->
+
+    <!-- <button onclick="fillMachines(machinesData)">Click me</button> -->
+    <div data-bs-toggle="collapse" data-bs-target="#machinelistcollapse">
+      <ol class="list-group">
+          <li id="currectVendingMachine" class="list-group-item d-flex justify-content-between align-items-start btn" style="background-color: lightgray">
+            <div class="ms-2 me-auto">
+              <div class="fw-bold">Selecteer Machine</div>
+            </div>
+          </li>
+      </ol>
+    </div>
+    <div id="machinelistcollapse" class="collapse">
+        <ol id=machinesList class="list-group">
+          <li class="machine-list-item list-group-item d-flex justify-content-between align-items-start btn" data-bs-toggle="collapse" data-bs-target="#machinelistcollapse">
+            <div class="ms-2 me-auto">
+              <div class="fw-bold">Loading data...</div>
+            </div>
+          </li>
+        </ol>
+    </div>
+
+    <ol id="productlist" class="list-group list-group-numbered">
+        <li class="list-group-item d-flex justify-content-between align-items-start">
+          <div class="ms-2 me-auto">
+            <div class="fw-bold">Loading data...</div>
+            Loading data...
+          </div>
+          <span class="badge badge-secondary rounded-pill">0</span>
+        </li>
+    </ol>
+    
+    <script>
+      function AddEventlistenersMachineSelect() {
+        // Add event listener to table
+        const els = document.getElementsByClassName("machine-list-item");
+        Array.from(els, (el) => {
+          let a = el.getAttribute('machineID')
+          el.addEventListener("click", function(e){ setLocationCallBack(e,a); }, false);
+        });
+      }
+      AddEventlistenersMachineSelect();
+    </script>
+  </body>
+</html>
