@@ -282,9 +282,9 @@
           return new Promise(function (resolve, reject) {
               let getURL = '';
               if (env.SERVERPORT == '443') {
-                getURL = 'https://'+ env.SERVERIP + '/machine';
+                getURL = 'https://'+ env.SERVERIP + ':' + env.SERVERPORT + '/machine';
               } else {
-                getURL = 'http://'+ env.SERVERIP + '/machine';
+                getURL = 'http://'+ env.SERVERIP + ':' + env.SERVERPORT + '/machine';
               }
               console.log('getURL =' + getURL);
               let req = new XMLHttpRequest();
@@ -313,9 +313,9 @@
         return new Promise(function (resolve, reject) {
               let getURL = '';
               if (env.SERVERPORT == '443') {
-                getURL = 'https://'+ env.SERVERIP + '/machine/'+machineID+'/products';
+                getURL = 'https://'+ env.SERVERIP + ':' + env.SERVERPORT + '/machine/'+machineID+'/products';
               } else {
-                getURL = 'http://'+ env.SERVERIP + '/machine/'+machineID+'/products';
+                getURL = 'http://'+ env.SERVERIP + ':' + env.SERVERPORT + '/machine/'+machineID+'/products';
               }
               console.log('getURL =' + getURL);
               let req = new XMLHttpRequest();
