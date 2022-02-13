@@ -320,8 +320,7 @@
       }
 
       function productDetailsHTML(combined, index){
-        //let combined = recombineProductNameAndExtras(product.name, product.stock_article);
-        
+
         if ( !hasDetails(combined) ) { return ``; }
         else {
         return `<div id="collapse${index}" class="accordion-collapsed collapse" aria-labelledby="heading${index}" data-bs-parent="#productlist">
@@ -344,29 +343,40 @@
       }
 
       function recombineProductNameAndExtras(name, stock_article) {
-        let name_and_article = name.split(':');
-        let extra_articles = null;
+        let r = {};
+        try {
+          let name_and_article = name.split(':');
+          let extra_articles = null;
 
-        if (stock_article != null) {
-          extra_articles = stock_article.split(':');
+          if (stock_article != null) {
+            extra_articles = stock_article.split(':');
+          }
+
+          r = {
+            'name': name_and_article[0].trim(),
+            'articles': (name_and_article[1] == undefined)
+              ? null
+              : name_and_article[1].trim(),
+            'extra_name': (extra_articles == null)
+              ? null
+              : ((extra_articles[0] == undefined)
+                ? null
+                : extra_articles[0].trim()),
+            'extra_values': (extra_articles == null)
+              ? null
+              : ((extra_articles[1] == undefined)
+                ? null
+                : extra_articles[1].trim())
+          }
+        } catch {
+          r = {
+            'name': name,
+            'articles': null,
+            'extra_name': null,
+            'extra_values': null
+          }
         }
 
-        let r = {
-          'name': name_and_article[0].trim(),
-          'articles': (name_and_article[1] == undefined)
-            ? null
-            : name_and_article[1].trim(),
-          'extra_name': (extra_articles == null)
-            ? null
-            : ((extra_articles[0] == undefined)
-              ? null
-              : extra_articles[0].trim()),
-          'extra_values': (extra_articles == null)
-            ? null
-            : ((extra_articles[1] == undefined)
-              ? null
-              : extra_articles[1].trim())
-        }
         return r;
       }
 
