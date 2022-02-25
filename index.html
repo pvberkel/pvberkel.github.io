@@ -78,7 +78,7 @@
     <title>Ton Kanters SmulBox</title>
   </head>
   <body>
-    <h3><center>Ton Kanters SmulBoxen</center></h3> 
+    <h3><center>SMULBOXEN</center></h3> 
     <script src="env.js"></script>
     <script src="./share.js"></script>
     <!-- Optional JavaScript; choose one of the two! -->
@@ -89,6 +89,7 @@
       let root = document.querySelector('#root');
       const event = new Event('requestproducts');
       const lastSmulBoxMachineIdStr = 'lastSmulBoxMachineId';
+      const storageEnabled = isStorageSuported();
       let machinesData = {};
       let productsData = {};
       let selectedMachineID = restoreFromLocalStorage();
@@ -101,7 +102,7 @@
       //console.log(env.SERVERIP, env.SERVERPORT);
 
       function setLocationCallBack(msg,machineID) {
-        if ( isStorageSuported() ){
+        if ( storageEnabled ){
           localStorage.setItem(lastSmulBoxMachineIdStr, machineID);
         }
         // clear products if machine changes
@@ -177,13 +178,22 @@
         else return days + " dagen"
       }
 
-      function isStorageSuported(){
-        return typeof(Storage) !== "undefined";
+      function isStorageSuported() {
+        if ( typeof(Storage) !== "undefined" ) {
+          try {
+            let r = localStorage.getItem(lastSmulBoxMachineIdStr)
+            return true; // Local storage is available.
+          } catch {
+            return false; // Local storage is disabled.
+          }
+        } else {
+          return false; // Browser does not support local storage.
+        }
       }
 
       function restoreFromLocalStorage(){
         let machineID = undefined;
-        if ( isStorageSuported() ) {
+        if ( storageEnabled ) {
           if ( localStorage.getItem(lastSmulBoxMachineIdStr) !== null ) {
             machineID = parseInt(localStorage.getItem(lastSmulBoxMachineIdStr));
             if (machineID == NaN) {
@@ -555,10 +565,10 @@
 
           lastupdate = new Date();
           // Wait some time before updating all data.
-          //timer = setTimeout(repeatUpdatepublicData.bind(null, false), env.REPEATDELAY);
+          timer = setTimeout(repeatUpdatepublicData.bind(null, false), env.REPEATDELAY);
         } else {
           //console.log('repeat in ' + (env.REPEATDELAY - (currenttime - lastupdate)) );
-          //timer = setTimeout(repeatUpdatepublicData.bind(null, false), env.REPEATDELAY - (currenttime - lastupdate));
+          timer = setTimeout(repeatUpdatepublicData.bind(null, false), env.REPEATDELAY - (currenttime - lastupdate));
         }
       }
       repeatUpdatepublicData(true);
