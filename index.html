@@ -92,7 +92,7 @@
       const storageEnabled = isStorageSuported();
       let machinesData = {};
       let productsData = {};
-      let selectedMachineID = restoreFromLocalStorage();
+      let selectedMachineID = setInitialMachine();
       let newMachine = true;
       let timer = undefined;
       let lastupdate = new Date();
@@ -213,6 +213,36 @@
         return machineID;
       }
 
+      function getMachineFromQuery() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const machineIdQuery = urlParams.get('machine');
+        let machineId= -1;
+        try {
+          machineId = parseInt(machineIdQuery);
+        } catch {
+          machineId = -1;
+        }
+        return machineId;
+      }
+
+      function setInitialMachine(){
+        // First look is the machine is set a a query parameter in the url.
+        machineNr = getMachineFromQuery();
+        if (machineNr >= 0) {
+          console.log('Found machine in query = ' + machineNr);
+          return machineNr;
+        } else {
+          // No machine query parameter. So now see if machine was set in local storage.
+          return restoreFromLocalStorage();
+        }
+      }
+
+      function listMachines(machines){
+        return machines.map((machine) => {
+              return machine.id;
+            })
+      }
+
       function machineListHTML(machine) {
         let r = 
         `<li machineID=${machine.id} class="machine-list-item list-group-item d-flex justify-content-between align-items-start btn" data-bs-toggle="collapse" data-bs-target="#machinelistcollapse">
@@ -232,14 +262,15 @@
 
           let foundSelected = false;
           // Is selected machine still present
-          if ( selectedMachineID == undefined) {          
+          if ( selectedMachineID != undefined ) {
             let list = machinesData.machines.filter( machine => machine.id == selectedMachineID );
             foundSelected = list.length > 0 ? true : false;
           }
 
-          if ( selectedMachineID == undefined && 
-               machinesData.machines.length > 0 &&
-               !foundSelected ){
+          // Choose first machine when selectedMachineID was not in the list or undifined
+          if ( selectedMachineID == undefined || 
+               ( machinesData.machines.length > 0 &&
+                !foundSelected ) ){
             selectedMachineID = machinesData.machines[0].id;
           }
 
@@ -533,10 +564,16 @@
       async function updatepublicData(){
         let [machinesDataLocal, error] = await handle(readMachinesPromise());
         if(error == undefined){
-          //console.log('Retrieved machines.');
+          console.log('Retrieved machines.');
           machinesData = machinesDataLocal;
+          try {
+            console.log(listMachines(machinesData.machines));
+          } catch {
+            console.log('Machines retrieval returned no machines = ' + machinesData);
+            machinesData = {}
+          }
         } else {
-          console.log('Machines retrievel failed.');
+          console.log('Machines retrieval failed.');
           machinesData = {};
         }
         fillMachines(machinesData);
@@ -546,10 +583,10 @@
       async function updatepublicData2(){
         let [productsDataLocal, error] = await handle(readProducts(selectedMachineID));
         if(error == undefined){
-          //console.log('Retrieved products.');
+          console.log('Retrieved products.');
           productsData = productsDataLocal;
         } else {
-          console.log('Products retrievel failed.');
+          console.log('Products retrieval failed.');
           productsData = [];
         }
         fillProducts(selectedMachineID, productsData);
