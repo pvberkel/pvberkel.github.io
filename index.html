@@ -436,6 +436,16 @@
         return r;
       }
 
+      function priceToString( selections ){
+        let result = '';
+        try {
+          result = '€ ' + selections[0].price;
+        } catch {
+          result = 'Prijs onbekend';
+        }
+        return result;
+      }
+
       function productHTML(product, index) {
         let extracted = recombineProductNameAndExtras(product.name, product.stock_article);
 
@@ -445,7 +455,7 @@
               <button class="accordion-button collapsed ${hasIngredients(extracted)}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${index}" aria-expanded="false" aria-controls="collapse${index}">
                 <div class="ms-2 me-auto">
                   <div class="fw-bold">${extracted.name}</div>
-                  € ${product.selections[0].price}
+                  ${priceToString(product.selections)}
                 </div>
                 <span class="badge ${productAmount2BadgeColor(product.amount)} rounded-pill">${product.amount}</span>
               </button>
