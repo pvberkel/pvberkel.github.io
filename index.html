@@ -513,7 +513,7 @@
           if ( selectedMachineID == machineId ) {
             productsData = productsDataNew;
             
-            productsDataNew.forEach((product, index) => {
+            productsDataNew.products.forEach((product, index) => {
                 ol.innerHTML += productHTML(product, index);
             });
           }
