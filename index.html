@@ -509,13 +509,15 @@
         const ol = document.getElementById("productlist");
         ol.innerHTML = "";
 
-        if ( selectedMachineID != undefined ) {
-          if ( selectedMachineID == machineId ) {
-            productsData = productsDataNew;
-            
-            productsDataNew.products.forEach((product, index) => {
-                ol.innerHTML += productHTML(product, index);
-            });
+        if (productsDataNew && productsDataNew.products) {
+          if ( selectedMachineID != undefined ) {
+            if ( selectedMachineID == machineId ) {
+              productsData = productsDataNew;
+              
+              productsDataNew.products.forEach((product, index) => {
+                  ol.innerHTML += productHTML(product, index);
+              });
+            }
           }
         }
       }
@@ -627,7 +629,7 @@
           productsData = productsDataLocal;
         } else {
           console.log('Products retrieval failed.');
-          productsData = [];
+          productsData = {};
         }
         fillProducts(selectedMachineID, productsData);
         return 0;
