@@ -268,12 +268,26 @@
         return r;
       }
 
+      function setTimeTag(time_string) {
+        const date = new Date(Date.parse(time_string));
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        const hms = hours + ':' + minutes + ':' + seconds;
+        const tag = document.getElementById("time-tag");
+        if ( ! hms.includes('NaN') ) {
+          tag.innerHTML = hms;
+        } else {
+          tag.innerHTML = '';
+        }
+      }
+
       function fillMachines(machinesData) {
         const ol = document.getElementById("machinesList");
         ol.innerHTML = "";
 
         let oldID = selectedMachineID;
-        if (machinesData && machinesData.machines) {
+        if (machinesData && machinesData.machines && machinesData.machines.length > 0) {
 
           let foundSelected = false;
           // Is selected machine still present
@@ -509,11 +523,12 @@
         const ol = document.getElementById("productlist");
         ol.innerHTML = "";
 
-        if (productsDataNew && productsDataNew.products) {
+        if (productsDataNew && productsDataNew.products && productsDataNew.products.length > 0) {
           if ( selectedMachineID != undefined ) {
             if ( selectedMachineID == machineId ) {
               productsData = productsDataNew;
-              
+
+              setTimeTag(productsData.time);
               productsDataNew.products.forEach((product, index) => {
                   ol.innerHTML += productHTML(product, index);
               });
@@ -607,16 +622,16 @@
         let [machinesDataLocal, error] = await handle(readMachinesPromise());
         if(error == undefined){
           console.log('Retrieved machines.');
-          machinesData = machinesDataLocal;
           try {
-            console.log(listMachines(machinesData.machines));
+            console.log(listMachines(machinesDataLocal.machines));
+            machinesData = machinesDataLocal;
           } catch {
             console.log('Machines retrieval returned no machines = ' + machinesData);
-            machinesData = {}
+            //machinesData = {}
           }
         } else {
           console.log('Machines retrieval failed.');
-          machinesData = {};
+          //machinesData = {};
         }
         fillMachines(machinesData);
         return 0;
@@ -626,10 +641,16 @@
         let [productsDataLocal, error] = await handle(readProducts(selectedMachineID));
         if(error == undefined){
           console.log('Retrieved products.');
-          productsData = productsDataLocal;
+          try {
+            if ( productsDataLocal.products.length > 0 ) {
+              productsData = productsDataLocal;
+            }
+          } catch {
+            console.log('Products retrieval returned no products.');
+          }
         } else {
           console.log('Products retrieval failed.');
-          productsData = {};
+          // productsData = {};
         }
         fillProducts(selectedMachineID, productsData);
         return 0;
@@ -693,6 +714,22 @@
       <li>
       </li>
     </div>
+
+    <style>
+      .time-tag {
+        position: fixed;
+        right: 0;
+        bottom: 0;
+        width: 100px;
+        height: 24px;
+        background-color: #b8d8b8;
+        color: white;
+        text-align: center;
+      }
+    </style>
+      
+    <div id="time-tag" class="time-tag">
+    </div> 
 
     <script>
       function AddEventlistenersMachineSelect() {
