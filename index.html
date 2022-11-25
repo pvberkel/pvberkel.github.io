@@ -268,18 +268,35 @@
         return r;
       }
 
+      function formatOffset(miliSeconds) {
+        console.log(miliSeconds);
+        const msPerSeconds = 1000
+        const msPerMinutes = msPerSeconds * 60;
+        const msPerHours = msPerMinutes * 60;
+        const msPerDay = msPerHours * 24;
+
+        const days = Math.floor(miliSeconds / msPerDay);
+        if (days > 0)
+          return days != 0 ? days + " dag" : days + " dagen";
+        
+        const hours = Math.floor(miliSeconds / msPerHours);
+        if (hours > 0)
+          return hours != 0 ? hours + " uur" : hours + " uren";
+
+        const minutes = Math.floor(miliSeconds / msPerMinutes);
+        if (minutes > 0)
+          return minutes != 0 ? minutes + " minute" : minutes + " minuten";
+
+        const seconds = Math.floor(miliSeconds / msPerSeconds);
+        return seconds == 1 ? seconds + " seconde" : seconds + " seconden";
+      }
+
       function setTimeTag(time_string) {
-        const date = new Date(Date.parse(time_string));
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        const seconds = String(date.getSeconds()).padStart(2, '0');
-        const hms = hours + ':' + minutes + ':' + seconds;
+        const now = new Date();
+        const originalDate = new Date( Date.parse( time_string ) );
+        const formatted = (formatOffset( now - originalDate ) + " oud");
         const tag = document.getElementById("time-tag");
-        if ( ! hms.includes('NaN') ) {
-          tag.innerHTML = hms;
-        } else {
-          tag.innerHTML = '';
-        }
+        tag.innerHTML = formatted;
       }
 
       function fillMachines(machinesData) {
@@ -720,7 +737,8 @@
         position: fixed;
         right: 0;
         bottom: 0;
-        width: 100px;
+        padding-left: 4px;
+        padding-right: 4px;
         height: 24px;
         background-color: #b8d8b8;
         color: white;
