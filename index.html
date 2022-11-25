@@ -294,7 +294,7 @@
       function setTimeTag(time_string) {
         const now = new Date();
         const originalDate = new Date( Date.parse( time_string ) );
-        const formatted = (formatOffset( now - originalDate ) + " oud");
+        const formatted = (formatOffset( Math.max(now - originalDate, 0) ) + " oud");
         const tag = document.getElementById("time-tag");
         tag.innerHTML = formatted;
       }
