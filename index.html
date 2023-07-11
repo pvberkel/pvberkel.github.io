@@ -24,7 +24,7 @@
         font-size: 24px;
         color: #333333;
         margin-top: .2em;
-        margin-bottom: 1em;
+        margin-bottom: -3px;
       }
       body {
         font-family: 'Montserrat', sans-serif;
@@ -79,6 +79,7 @@
   </head>
   <body>
     <h3><center>SMULBOXEN</center></h3> 
+    <h5><center>voorraad en allergenen informatie</center></h5> 
     <script src="env.js"></script>
     <script src="./share.js"></script>
     <!-- Optional JavaScript; choose one of the two! -->
@@ -299,6 +300,27 @@
         tag.innerHTML = formatted;
       }
 
+      // Convert Javascript Object groupIdMap to Map.
+      function objectToMap(obj) {
+        const map = new Map();
+        Object.keys(obj).forEach((key) => {
+          map.set(Number(key), obj[key]);
+        });
+        return map;
+      }
+
+      // Convert mapping from machine numbers to groupId.
+      function createInverseGroupIdMapping(groupIdMap) {
+        let inverseGroupIdMapping = new Map();
+        for (let [gKey, value] of groupIdMap) {
+          value.trueIds.forEach((machineId) => {
+            inverseGroupIdMapping.set(machineId, {groupId: gKey, groupName: groupIdMap.get(gKey).groupName})
+            }
+          )
+        }
+        return inverseGroupIdMapping;
+      }
+
       function fillMachines(machinesData) {
         const ol = document.getElementById("machinesList");
         ol.innerHTML = "";
@@ -307,13 +329,17 @@
         if (machinesData && machinesData.machines && machinesData.machines.length > 0) {
 
           let foundSelected = false;
-          // Is selected machine still present
+          // Is selected machine still present?
           if ( selectedMachineID != undefined ) {
+            let machineToGroup = createInverseGroupIdMapping(objectToMap(machinesData.groupIdMap));
+            if (machineToGroup.has(selectedMachineID)) {
+              console.log('using groupId ' + machineToGroup.get(selectedMachineID).groupId + ' i.s.o. machineId ' + selectedMachineID);
+              selectedMachineID = machineToGroup.get(selectedMachineID).groupId;
+            }
             let list = machinesData.machines.filter( machine => machine.id == selectedMachineID );
             foundSelected = list.length > 0 ? true : false;
           }
 
-          // Choose first machine when selectedMachineID was not in the list or undifined
           if ( selectedMachineID == undefined || 
                ( machinesData.machines.length > 0 &&
                 !foundSelected ) ){
