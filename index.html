@@ -526,7 +526,7 @@
       function priceToString( selections ){
         let result = '';
         try {
-          result = '€ ' + selections[0].price;
+          result = '€ ' + selections[selections.length-1].price;
         } catch {
           result = 'Prijs onbekend';
         }
