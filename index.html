@@ -476,7 +476,7 @@
       }
 
       function hasDetails(combined){
-        if (combined.articles == null && combined.extra_name == null) { return false }
+        if (combined.articles == null && ( combined.extra_name == "" || combined.extra_name == null )) { return false }
         else { return true; }
       }
 
